@@ -1,81 +1,72 @@
 package models
 
 import (
-	"ToDoList/database"
-
+	"TodoList/DataBase"
+	"TodoList/domain"
 	"github.com/gofiber/fiber/v2"
 )
 
-type Todo struct {
-	ID        uint   `gorm:"primary_key" json:"id"`
-	Title     string `json:"title"`
-	Completed bool   `json:"completed"`
-}
-
 func GetTodos(c *fiber.Ctx) error {
-	db := database.DBConn
-	var todos []Todo
+	db := DataBase.DBConn
+	var todos []domain.Todo
 	db.Find(&todos)
 	return c.JSON(&todos)
 }
 
-func CreateTodo(c *fiber.Ctx) error {
-	db := database.DBConn
-	todo := new(Todo)
-	err := c.BodyParser(todo)
+func GetTodoById(c *fiber.Ctx) error {
+	id := c.Params("id")
+	db := DataBase.DBConn
+	var todo domain.Todo
+	err := db.Find(&todo, id).Error
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "check your input", "data": err})
-	}
-	err = db.Create(&todo).Error
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "could not create todo", "data": err})
+		return c.Status(400).JSON(fiber.Map{"status": "error", "message": "couldn't find todo ", "data": err})
 	}
 	return c.JSON(&todo)
 }
 
-func GetTodoById(c *fiber.Ctx) error {
-	id := c.Params("id")
-	db := database.DBConn
-	var todo Todo
-	err := db.Find(&todo, id).Error
+func CreateTodo(c *fiber.Ctx) error {
+	db := DataBase.DBConn
+	todo := new(domain.Todo)
+	if err := c.BodyParser(todo); err != nil {
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "check your input ", "data": err})
+	}
+	err := db.Create(&todo).Error
 	if err != nil {
-		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "Coud not find todo", "data": err})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "check your input ", "data": err})
 	}
 	return c.JSON(&todo)
 }
 
 func UpdateTodo(c *fiber.Ctx) error {
-	type UpdateTodo struct {
-		Title     string `json:"title"`
-		Completed bool   `json:"completed"`
-	}
 
 	id := c.Params("id")
-	db := database.DBConn
-	var todo Todo
+	db := DataBase.DBConn
+	var todo domain.Todo
 	err := db.Find(&todo, id).Error
 	if err != nil {
-		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "Coud not update todo", "data": err})
+		return c.Status(400).JSON(fiber.Map{"status": "error", "message": "couldn't find todo ", "data": err})
 	}
-	var updatedTodo UpdateTodo
-	err = c.BodyParser(&updatedTodo)
+	var updateTodo domain.UpdatedTodo
+	err = c.BodyParser(&updateTodo)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "reveiw input", "data": err})
+		return c.Status(400).JSON(fiber.Map{"status": "error", "message": "review input ", "data": err})
 	}
-	todo.Title = updatedTodo.Title
-	todo.Completed = updatedTodo.Completed
+
+	todo.Title = updateTodo.Title
+	todo.Complete = updateTodo.Complete
+
 	db.Save(&todo)
-	return c.JSON(&todo)
+	return c.JSON(&updateTodo)
 }
 
 func DeleteTodo(c *fiber.Ctx) error {
 	id := c.Params("id")
-	db := database.DBConn
-	var todo Todo
+	db := DataBase.DBConn
+	var todo domain.Todo
 	err := db.Find(&todo, id).Error
 	if err != nil {
-		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "Can not find Todo", "data": err})
+		return c.Status(400).JSON(fiber.Map{"status": "error", "message": "couldn't delete todo ", "data": err})
 	}
 	db.Delete(&todo)
-	return c.SendStatus(200)
+	return c.JSON(200)
 }
