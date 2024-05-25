@@ -15,6 +15,7 @@ func setupRoutes(app *fiber.App) {
 	app.Delete(constants.Delete, models.DeleteTodo)
 }
 func main() {
+
 	DataBase.InitDatabase()
 	app := fiber.New()
 	setupRoutes(app)
